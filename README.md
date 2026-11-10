@@ -1,56 +1,66 @@
-# Welcome to your Expo app 👋
+# Listy
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Android-first todo app built with Expo (React Native). Supports multiple lists, check/delete, and sharing lists with other people (e.g. a grocery list). Backend is hosted Supabase (Postgres, Auth, Row Level Security, Realtime).
 
-## Get started
+## Setup
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Prerequisites: Node, and Expo Go on an Android phone (or an Android emulator).
 
 ```bash
-npm run reset-project
+npm install
+npm start                 # open in Expo Go
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Create an account in the app. The email should open Listy (`listy://auth/callback`). If the link goes to a browser page instead, type the code from the email.
 
-### Other setup steps
+**Built-in mail is capped at 2 emails per hour** on the Free plan (confirmation, reset, magic links all count). After that you get `429 Email rate exceeded`. This is not a Listy bug.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Workarounds:
 
-## Learn more
+- **Testing:** [Authentication → Providers → Email](https://supabase.com/dashboard/project/xbziyldmasgsafmlwuuj/auth/providers) — turn **Confirm email** off. New sign-ups can sign in immediately, with no mail.
+- **Stuck account:** in the [SQL Editor](https://supabase.com/dashboard/project/xbziyldmasgsafmlwuuj/sql/new) set a password:
+  ```sql
+  update auth.users
+  set encrypted_password = extensions.crypt('password123', extensions.gen_salt('bf')),
+      email_confirmed_at = coalesce(email_confirmed_at, now()),
+      updated_at = now()
+  where email = 'you@example.com';
+  ```
+- **Production:** add **custom SMTP** (Resend, SendGrid, Postmark, SES) under [Auth SMTP](https://supabase.com/dashboard/project/xbziyldmasgsafmlwuuj/settings/auth). Custom SMTP is allowed on Free and removes the 2/hour cap.
 
-To learn more about developing your project with Expo, look at the following resources:
+**Email links must open Listy, not a browser.** Listy is Expo, Android-only, no web app. Custom scheme `listy://` is the redirect (App Links need a domain we do not have yet).
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. [Auth URL Configuration](https://supabase.com/dashboard/project/xbziyldmasgsafmlwuuj/auth/url-configuration)
+   - Site URL: `listy://auth/callback`
+   - Redirect URLs: `listy://**`, `listy://auth/callback`, `exp://**`
+2. Paste [Auth email templates](https://supabase.com/dashboard/project/xbziyldmasgsafmlwuuj/auth/templates) from this repo (hosted does not use `supabase/templates` until you paste them):
+   - Confirm sign up → `supabase/templates/confirmation.html`
+   - Reset password → `supabase/templates/recovery.html`
+   Those use `{{ .RedirectTo }}?token_hash={{ .TokenHash }}` so the email opens the app. **Do not** use `{{ .ConfirmationURL }}` — that verifies on `supabase.co` first, then Chrome turns `listy://` into a junk redirect.
+3. In Resend, turn **off click tracking** for `bokeh.gallery`. Tracking wraps the deep link in `click.resend.com/...` and breaks it.
 
-## Join the community
+The app already sends `emailRedirectTo: 'listy://auth/callback'` on sign-up / reset, and `app.json` registers scheme `listy`.
 
-Join our community of developers creating universal apps.
+The client lives in `src/lib/supabase.ts` (not a root `App.tsx`). Env vars:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_KEY`
+
+After changing `.env` or `.env.local`, restart Expo with `npx expo start --clear`.
+
+## Useful commands
+
+| Command | What it does |
+| --- | --- |
+| `npx supabase db push` | Apply `supabase/migrations` to the linked hosted project |
+| `npx supabase gen types typescript --linked > src/lib/database.types.ts` | Refresh DB types from hosted |
+| `npm run db:start` / `db:stop` | Optional local Docker Supabase |
+| `npm run typecheck` | TypeScript check |
+| `npx eslint src` | Lint |
+
+## Layout
+
+- `src/app/` - Expo Router screens: `(auth)` sign in/up, `(app)` lists, `list/[id]`, `share/[id]`
+- `src/hooks/` - TanStack Query hooks (lists, items, members, realtime sync)
+- `src/lib/` - Supabase client, auth context, theme, generated DB types
+- `supabase/migrations/` - schema and RLS policies
