@@ -4,12 +4,13 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { AppState, useColorScheme, View } from 'react-native';
+import { AppState, Text, useColorScheme, View } from 'react-native';
 
 import { ListySplash } from '@/components/listy-splash';
 import { UpdatePassword } from '@/components/update-password';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useListyFonts } from '@/lib/fonts';
+import { supabaseConfigured } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
 // Native fade options are not available in Expo Go — the JS overlay handles that instead.
@@ -68,7 +69,30 @@ function RootNavigator() {
   );
 }
 
+function MissingConfig() {
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#FFFFFF' }}>
+      <StatusBar style="dark" />
+      <Text style={{ fontSize: 22, fontWeight: '700', color: '#123A48', marginBottom: 12 }}>
+        Listy is missing its database settings
+      </Text>
+      <Text style={{ fontSize: 16, lineHeight: 24, color: '#5B6E74' }}>
+        This install was built without EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_KEY. Add
+        those to the EAS preview environment and rebuild the APK.
+      </Text>
+    </View>
+  );
+}
+
 export default function RootLayout() {
+  if (!supabaseConfigured) {
+    return <MissingConfig />;
+  }
+
   return (
     <AuthProvider>
       <RootNavigator />

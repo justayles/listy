@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ListyBrand } from '@/components/listy-brand';
 import { Button, ErrorText, errorMessage } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { listyFont } from '@/lib/fonts';
@@ -62,7 +63,7 @@ export default function ConfirmEmail() {
       <ScrollView
         contentContainerStyle={[styles.container, { paddingTop: 24 + insets.top, paddingBottom: 24 + insets.bottom }]}
         keyboardShouldPersistTaps="handled">
-        <Text style={[styles.wordmark, { color: theme.primary }]}>Listy</Text>
+        <ListyBrand color={theme.text} style={styles.brand} />
         <Text style={[styles.title, { color: theme.text }]}>
           {isRecovery ? 'Enter reset code' : 'Confirm your email'}
         </Text>
@@ -122,7 +123,7 @@ export default function ConfirmEmail() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  wordmark: { fontSize: 40, fontFamily: listyFont.wordmark, marginBottom: 10, paddingBottom: 4 },
+  brand: { marginBottom: 10 },
   title: { fontSize: 22, fontFamily: listyFont.semibold },
   subtitle: { fontSize: 15, marginTop: 4, marginBottom: 24, lineHeight: 22 },
   input: {

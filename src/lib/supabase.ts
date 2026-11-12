@@ -28,23 +28,25 @@ function resolveSupabaseUrl(rawUrl: string): string {
   return url.toString().replace(/\/$/, '');
 }
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+export const supabaseConfigured = Boolean(
+  process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_KEY,
+);
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error(
-    'Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_KEY. Copy .env.example to .env and restart Expo.',
-  );
-}
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://unconfigured.invalid';
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY ?? 'unconfigured';
 
-export const supabase = createClient<Database>(resolveSupabaseUrl(supabaseUrl), supabaseKey, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
+export const supabase = createClient<Database>(
+  supabaseConfigured ? resolveSupabaseUrl(supabaseUrl) : supabaseUrl,
+  supabaseKey,
+  {
+    auth: {
+      storage: AsyncStorage,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
   },
-});
+);
 
 // Only refresh tokens while the app is in the foreground.
 AppState.addEventListener('change', (state) => {

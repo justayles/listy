@@ -1,28 +1,14 @@
 import { Stack } from 'expo-router';
-import { Image, Text, View } from 'react-native';
+import type { ColorValue } from 'react-native';
 
+import { ListyBrand } from '@/components/listy-brand';
 import { useRealtimeSync } from '@/hooks/use-realtime-sync';
 import { useAuth } from '@/lib/auth';
 import { listyFont } from '@/lib/fonts';
 import { useTheme } from '@/lib/theme';
 
-function ListyHeaderTitle() {
-  const theme = useTheme();
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <Image source={require('../../../assets/images/icon.png')} style={{ width: 40, height: 40 }} />
-      <Text
-        style={{
-          fontFamily: listyFont.semibold,
-          fontSize: 18,
-          color: theme.text,
-          includeFontPadding: false,
-          paddingBottom: 2,
-        }}>
-        Listy
-      </Text>
-    </View>
-  );
+function ListyHeaderTitle({ tintColor }: { children: string; tintColor?: ColorValue }) {
+  return <ListyBrand color={tintColor ?? undefined} />;
 }
 
 export default function AppLayout() {

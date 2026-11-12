@@ -7,75 +7,110 @@ const OUT = process.argv[3] ?? 'C:/GIT/todo/assets/images';
 const SIZE = 1024;
 const CLEAR = { r: 0, g: 0, b: 0, alpha: 0 };
 
-function contentBox(data, width, height) {
+function isBrown(r, g, b) {
+  return r > 70 && r > g + 15 && r - b > 30;
+}
+
+function layout(data, width, height) {
+  let rMinX = width;
+  let rMinY = height;
+  let rMaxX = 0;
+  let rMaxY = 0;
+  let ring = 0;
+  let mass = 0;
+  let mx = 0;
+  let my = 0;
   let minX = width;
   let minY = height;
   let maxX = 0;
   let maxY = 0;
+
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (data[(y * width + x) * 4 + 3] > 12) {
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
+      const i = (y * width + x) * 4;
+      const a = data[i + 3];
+      if (a < 12) continue;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+      if (isBrown(data[i], data[i + 1], data[i + 2])) {
+        ring++;
+        mass += a;
+        mx += x * a;
+        my += y * a;
+        if (x < rMinX) rMinX = x;
+        if (y < rMinY) rMinY = y;
+        if (x > rMaxX) rMaxX = x;
+        if (y > rMaxY) rMaxY = y;
       }
     }
   }
-  if (maxX < minX) return { left: 0, top: 0, width, height };
-  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.06);
-  const left = Math.max(0, minX - pad);
-  const top = Math.max(0, minY - pad);
-  return {
-    left,
-    top,
-    width: Math.min(width, maxX + 1 + pad) - left,
-    height: Math.min(height, maxY + 1 + pad) - top,
-  };
+
+  const cx = ring > 100 ? mx / mass : (minX + maxX) / 2;
+  const cy = ring > 100 ? my / mass : (minY + maxY) / 2;
+  const ringSize =
+    ring > 100
+      ? Math.max(rMaxX - rMinX + 1, rMaxY - rMinY + 1)
+      : Math.max(maxX - minX + 1, maxY - minY + 1);
+
+  return { cx, cy, ringSize };
 }
 
-async function transparentMark() {
-  const { data, info } = await sharp(SRC).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const box = contentBox(data, info.width, info.height);
-  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
-    .extract(box)
-    .png();
-}
-
-async function fitOnCanvas(mark, canvas, scale) {
-  const inner = Math.round(canvas * scale);
-  const resized = await mark
-    .clone()
-    .resize(inner, inner, { fit: 'contain', background: CLEAR })
+async function fitOnCanvas(srcBuf, info, layout, canvas, ringScale) {
+  const scale = (canvas * ringScale) / layout.ringSize;
+  const w = Math.round(info.width * scale);
+  const h = Math.round(info.height * scale);
+  const resized = await sharp(srcBuf, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .resize(w, h)
     .png()
     .toBuffer();
+
+  let left = Math.round(canvas / 2 - layout.cx * scale);
+  let top = Math.round(canvas / 2 - layout.cy * scale);
+  let cropX = 0;
+  let cropY = 0;
+  let cropW = w;
+  let cropH = h;
+  if (left < 0) {
+    cropX = -left;
+    cropW += left;
+    left = 0;
+  }
+  if (top < 0) {
+    cropY = -top;
+    cropH += top;
+    top = 0;
+  }
+  if (left + cropW > canvas) cropW = canvas - left;
+  if (top + cropH > canvas) cropH = canvas - top;
+
+  const piece = await sharp(resized)
+    .extract({ left: cropX, top: cropY, width: cropW, height: cropH })
+    .png()
+    .toBuffer();
+
   return sharp({
     create: { width: canvas, height: canvas, channels: 4, background: CLEAR },
   })
-    .composite([{ input: resized, gravity: 'centre' }])
+    .composite([{ input: piece, left, top }])
     .png();
 }
 
 await mkdir(OUT, { recursive: true });
-const mark = await transparentMark();
+const { data, info } = await sharp(SRC).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+const box = layout(data, info.width, info.height);
 
-const foreground = await fitOnCanvas(mark, SIZE, 0.66);
+// Adaptive: keep the ring inside the ~66% mask. Splash/icon can sit a bit larger.
+const foreground = await fitOnCanvas(data, info, box, SIZE, 0.6);
 await foreground.toFile(path.join(OUT, 'android-icon-foreground.png'));
 
-const iconBuf = await (await fitOnCanvas(mark, SIZE, 0.78)).toBuffer();
+const iconBuf = await (await fitOnCanvas(data, info, box, SIZE, 0.7)).toBuffer();
 await sharp(iconBuf).toFile(path.join(OUT, 'icon.png'));
 await sharp(iconBuf).toFile(path.join(OUT, 'splash-icon.png'));
 await sharp(iconBuf).resize(48, 48).toFile(path.join(OUT, 'favicon.png'));
 
-const mono = await mark
-  .clone()
-  .resize(Math.round(SIZE * 0.66), Math.round(SIZE * 0.66), { fit: 'contain', background: CLEAR })
-  .greyscale()
-  .png()
-  .toBuffer();
-await sharp({ create: { width: SIZE, height: SIZE, channels: 4, background: CLEAR } })
-  .composite([{ input: mono, gravity: 'centre' }])
-  .png()
-  .toFile(path.join(OUT, 'android-icon-monochrome.png'));
+const monoBuf = await (await fitOnCanvas(data, info, box, SIZE, 0.6)).toBuffer();
+await sharp(monoBuf).greyscale().toFile(path.join(OUT, 'android-icon-monochrome.png'));
 
-console.log('Wrote transparent icons to', OUT);
+console.log('Wrote centered transparent icons to', OUT);

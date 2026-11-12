@@ -75,7 +75,9 @@ export function ListySplash({
           style={[styles.logo, fadeUp(logo)]}
         />
       </View>
-      <Animated.Text style={[styles.title, fadeUp(title)]}>Listy</Animated.Text>
+      <View style={styles.titleWrap}>
+        <Animated.Text style={[styles.title, fadeUp(title)]}>Listy</Animated.Text>
+      </View>
     </Animated.View>
   );
 }
@@ -90,11 +92,14 @@ const styles = StyleSheet.create({
   },
   mark: { width: 200, height: 200, alignItems: 'center', justifyContent: 'center' },
   logo: { width: 176, height: 176 },
+  titleWrap: { marginTop: 8, paddingBottom: 14, overflow: 'visible' },
   title: {
-    marginTop: 4,
     color: LISTY_TITLE,
     fontSize: 48,
+    lineHeight: 64,
     fontFamily: listyFont.bold,
     letterSpacing: 0.4,
+    includeFontPadding: false,
+    textAlign: 'center',
   },
 });
