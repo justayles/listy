@@ -41,7 +41,7 @@ function RootNavigator() {
       {!loading ? (
         <QueryClientProvider client={queryClient}>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <StatusBar style={splashVisible ? 'light' : 'auto'} />
+            <StatusBar style={splashVisible ? 'dark' : 'auto'} />
             {passwordRecovery ? (
               <UpdatePassword />
             ) : (

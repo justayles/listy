@@ -127,7 +127,7 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  wordmark: { fontSize: 28, fontFamily: listyFont.bold, letterSpacing: 0.3, marginBottom: 10 },
+  wordmark: { fontSize: 40, fontFamily: listyFont.wordmark, marginBottom: 10, paddingBottom: 4 },
   title: { fontSize: 22, fontFamily: listyFont.semibold },
   subtitle: { fontSize: 15, marginTop: 4, marginBottom: 24 },
   input: {

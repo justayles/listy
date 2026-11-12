@@ -4,9 +4,8 @@ import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 import { listyFont } from '@/lib/fonts';
 
-/** Deep teal — dark enough for a light logo to pop. */
-export const LISTY_SPLASH = '#123A48';
-const LISTY_CREAM = '#F3FBF7';
+export const LISTY_SPLASH = '#FFFFFF';
+const LISTY_TITLE = '#000000';
 
 /**
  * Branded overlay that plays once at launch. Expo Go cannot show a custom
@@ -93,7 +92,7 @@ const styles = StyleSheet.create({
   logo: { width: 176, height: 176 },
   title: {
     marginTop: 4,
-    color: LISTY_CREAM,
+    color: LISTY_TITLE,
     fontSize: 48,
     fontFamily: listyFont.bold,
     letterSpacing: 0.4,
